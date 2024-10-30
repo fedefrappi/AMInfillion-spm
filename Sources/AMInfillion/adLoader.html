@@ -1,0 +1,70 @@
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script type='text/javascript' src='https://static.truex.com/js/client.js'></script>
+    </head>
+    <body style="background-color: black">
+        
+        <div data-role="page">
+            <div id="ad_container" style="position: fixed; width: 100%; height: 100%; margin:auto;top:0;left:0;"></div>
+            <script type='text/javascript'>
+                
+                // send events to native
+                function sendEventToNative(eventName, eventData) {
+                    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.truexMessageHandler) {
+                        window.webkit.messageHandlers.truexMessageHandler.postMessage({
+                            "eventName": eventName,
+                            "eventData": eventData
+                        });
+                    }
+                }
+                
+                function showAd(placementHash, userId, adFromWSAPI) {
+                    var options = {
+                        network_user_id: userId,
+                        partner_config_hash: placementHash,
+                        handle_clickthrough_manually: true
+                    };
+
+                    // initialize trueX client library
+                    truex.client(options, function(client) {
+                        
+                        // pass ad from WSAPI to trueX library to allow it to wire up event handlers and other tracking
+                        client.prepareAd(adFromWSAPI);
+                       
+                       // add ad event handlers to the ad object -- in this case we blindly pass the events to native side
+                       // and let it manage everything
+                        adFromWSAPI.onStart(function(){
+                            sendEventToNative('onStart');
+                        });
+
+                        adFromWSAPI.onCredit(function(){
+                            sendEventToNative('onCredit');
+                        });
+                        
+                        adFromWSAPI.onClickthrough(function(url){
+                            sendEventToNative('onClickthrough', url);
+                        });
+
+                        adFromWSAPI.onFinish(function(){
+                            sendEventToNative('onFinish');
+                        });
+                        
+                        adFromWSAPI.onClose(function(){
+                            sendEventToNative('onClose');
+                        });
+                        
+                        // once handlers are in place, load the actual ad onto the page
+                        let adContainer = document.getElementById("ad_container");
+                        let displayOptions = {
+                            width: '100%',
+                            height: '100%'
+                        }
+                        client.loadActivityIntoContainer(adFromWSAPI, adContainer, displayOptions);
+                    });
+                }
+                
+            </script>
+        </div>
+    </body>
+</html>
